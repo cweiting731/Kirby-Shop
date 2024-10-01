@@ -70,7 +70,10 @@ namespace F74121246_Practice_2_2
                         case 1:
                             if (!isOpening)
                             {
-                                isOpening = options.OpenShop(commodities);
+                                while (!isOpening)
+                                {
+                                    isOpening = options.OpenShop(commodities);
+                                }
                             }
                             else
                             {
@@ -80,7 +83,11 @@ namespace F74121246_Practice_2_2
                         case 2:
                             if (isOpening)
                             {
-                                income.Add(options.AddOrder(commodities, users));
+                                int tmp = options.AddOrder(commodities, users);
+                                if (tmp > 0)
+                                {
+                                    income.Add(tmp);
+                                }
                             }
                             else
                             {
@@ -257,13 +264,21 @@ namespace F74121246_Practice_2_2
         {
             if (needAmount == null)
             {
-                Console.WriteLine("欲購商品個數應為整數，請重新輸入，或輸入 -1 取消訂單 ! ");
+                Console.WriteLine("\n欲購商品個數應為整數，請重新輸入，或輸入 -1 取消訂單 !\n");
                 return false;
             }
             if (needAmount.Length != commodities.Count)
             {
-                Console.WriteLine("輸入長度應與商品種類個數相同，請重新輸入，或輸入 -1 取消訂單 ! ");
+                Console.WriteLine("\n輸入長度應與商品種類個數相同，請重新輸入，或輸入 -1 取消訂單 !\n");
                 return false;
+            }
+            foreach (int i in needAmount)
+            {
+                if (i < 0)
+                {
+                    Console.WriteLine("\n欲購商品個數應為正整數，請重新輸入，或輸入 -1 取消訂單 !\n");
+                    return false;
+                }
             }
             return true;
         }
@@ -341,33 +356,55 @@ namespace F74121246_Practice_2_2
                 Console.Write("請依序輸入此訂單每一種類的商品各需要買幾個: ");
                 int[] needAmount = StringToIntArray(Regex.Split(Console.ReadLine().Trim(), @"\s+"));
                 bool judgeNeedAmount = JudgeNeedAmount(needAmount, commodities);
-                
-                // fail and get customer's need amount again
-                while (!judgeNeedAmount)
-                {
-                    Console.Write("請依序輸入此訂單每一種類的商品各需要買幾個: ");
-                    string input = Console.ReadLine().Trim();
-                    if (input == "-1")
-                    {
-                        Console.WriteLine("訂單取消 !");
-                        return 0;
-                    }
-                    needAmount = StringToIntArray(Regex.Split(input, @"\s+"));
-                    judgeNeedAmount = JudgeNeedAmount(needAmount, commodities);
-                }
-
                 int cost = 0;
 
-                // check inventory > need amount
-                for (int i = 0; i < needAmount.Length; i++)
+                while (true)
                 {
-                    if (commodities[i].inventory < needAmount[i])
+                    // fail and get customer's need amount again
+                    while (!judgeNeedAmount)
                     {
-                        Console.WriteLine("\n庫存不足，此筆訂單取消\n");
-                        return 0;
+                        Console.Write("請依序輸入此訂單每一種類的商品各需要買幾個: ");
+                        string input = Console.ReadLine().Trim();
+                        if (input == "-1")
+                        {
+                            Console.WriteLine("訂單取消 !");
+                            return 0;
+                        }
+                        needAmount = StringToIntArray(Regex.Split(input, @"\s+"));
+                        judgeNeedAmount = JudgeNeedAmount(needAmount, commodities);
                     }
-                    cost += (needAmount[i] * commodities[i].price);
+
+
+                    // check inventory > need amount
+                    try
+                    {
+                        for (int i = 0; i < needAmount.Length; i++)
+                        {
+                            if (commodities[i].inventory < needAmount[i])
+                            {
+                                Console.WriteLine("\n庫存不足，此筆訂單取消\n");
+                                return 0;
+                            }
+                            checked
+                            {
+                                cost += (needAmount[i] * commodities[i].price);
+                            }
+                        }
+                        if (cost == 0)
+                        {
+                            Console.WriteLine("\n卡比懷疑你想炸機，請重新輸入，或輸入 -1 取消訂單 !\n");
+                            judgeNeedAmount = false;
+                            continue;
+                        }
+                        break;
+                    } catch (OverflowException)
+                    {
+                        Console.WriteLine("\n訂單金額龐大，超過系統負荷，此筆訂單取消，請分批輸入，或輸入 -1 取消訂單 !\n");
+                        judgeNeedAmount = false;
+                        continue;
+                    }
                 }
+
 
                 // try to get customer's money
                 bool isMoneyEnough = true;
